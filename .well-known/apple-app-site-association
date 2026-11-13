@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "F3C4BY8MTB.com.yukitaka13.manekichi",
+          "F3C4BY8MTB.com.yukitaka13.manekichi.development"
+        ],
+        "components": [
+          { "/": "/manekichi/join*", "comment": "まねきち (Penny Pup): 家族への招待" }
+        ]
+      }
+    ]
+  }
+}

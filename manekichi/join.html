@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>まねきち - 家族への招待</title>
+<!--
+  まねきち (Penny Pup) のおうちの人を招く QR の行き先。
+  アプリが入っていれば、 このページは開かずにアプリが開く (iOS のユニバーサルリンク / Android の App Links。
+  /.well-known/ の 2 つのファイル)。 入っていない時だけ、 このページからストアへ送る:
+  - Android: Google Play へ。 招待 (c, t) は Play の install referrer でアプリに渡る (= 入れた後そのまま家族に入る)
+  - iPhone: App Store へ。 戻ってきたら 「家族に入る」 を押す (= pochi://join でアプリを開く)
+-->
+<style>
+  :root { --bg1:#FFD25A; --bg2:#FFE2B5; --ink:#3B2416; --sub:#7A5A45; --red:#C8432B; --card:#FFFDF7; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; font-family: -apple-system, "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+         color:var(--ink); background:linear-gradient(var(--bg1), var(--bg2)); display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+  main { width:100%; max-width:420px; background:var(--card); border-radius:28px; padding:28px 22px; text-align:center; box-shadow:0 8px 30px rgba(110,55,25,.15); }
+  img { width:96px; height:96px; border-radius:22px; }
+  h1 { font-size:22px; margin:14px 0 6px; }
+  p { color:var(--sub); line-height:1.6; margin:6px 0; }
+  .btn { display:block; margin:14px 0 0; padding:15px; border-radius:16px; font-weight:700; font-size:17px; text-decoration:none; }
+  .primary { background:var(--red); color:#fff; }
+  .secondary { background:#fff; color:var(--ink); border:2px solid #E2D6C2; }
+  .step { font-size:13px; color:var(--sub); margin-top:18px; }
+  .code { font-size:24px; letter-spacing:.15em; font-weight:800; color:var(--ink); margin:4px 0 0; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <img src="icon.png" alt="">
+  <h1 id="title"></h1>
+  <p id="lead"></p>
+  <div id="ios" class="hidden">
+    <p class="step" id="iosStep1"></p>
+    <a class="btn secondary" id="appStore" href="#"></a>
+    <p class="step" id="iosStep2"></p>
+    <a class="btn primary" id="openApp" href="#"></a>
+  </div>
+  <div id="android" class="hidden">
+    <a class="btn primary" id="play" href="#"></a>
+    <p class="step" id="androidNote"></p>
+  </div>
+  <div id="other" class="hidden">
+    <p id="otherNote"></p>
+  </div>
+  <p class="step" id="codeLabel"></p>
+  <p class="code" id="code"></p>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var c = q.get('c') || '', t = q.get('t') || '';
+  // 招待の形だけ通す (= ページに出すのは番号だけ。 合言葉は出さない)
+  var ok = /^[0-9]{6}$/.test(c) && /^[A-Za-z0-9_-]{8,128}$/.test(t);
+  var ja = (navigator.language || '').toLowerCase().indexOf('ja') === 0;
+  document.documentElement.lang = ja ? 'ja' : 'en';
+  var T = ja ? {
+    title: 'まねきちの家族に招待されました',
+    lead: 'アプリを入れて、 おうちの人として登録すると家族に入れます。',
+    bad: 'この招待のリンクは読めませんでした。 招いた人に、 もう一度 QR を出してもらってください。',
+    iosStep1: '1. アプリを入れる', appStore: 'App Store で入れる',
+    iosStep2: '2. 入れたら、 ここに戻って押す', openApp: '家族に入る',
+    play: 'Google Play で入れる', androidNote: '入れたらアプリを開き、 おうちの人として登録すると、 そのまま家族に入ります。',
+    other: 'スマホのカメラで QR を読んでください。', code: 'アプリで番号を入れる時はこちら'
+  } : {
+    title: 'You’re invited to a Penny Pup family',
+    lead: 'Get the app and sign up as a grown-up to join the family.',
+    bad: 'This invite link can’t be read. Ask the person who invited you to show the QR code again.',
+    iosStep1: '1. Get the app', appStore: 'Get it on the App Store',
+    iosStep2: '2. Then come back here and tap', openApp: 'Join the family',
+    play: 'Get it on Google Play', androidNote: 'Open the app and sign up as a grown-up. You’ll join the family right away.',
+    other: 'Scan the QR code with your phone’s camera.', code: 'Code to type in the app'
+  };
+  var $ = function (id) { return document.getElementById(id); };
+  $('title').textContent = T.title;
+  if (!ok) { $('lead').textContent = T.bad; return; }
+  $('lead').textContent = T.lead;
+  $('codeLabel').textContent = T.code;
+  $('code').textContent = c.slice(0, 3) + ' ' + c.slice(3);
+  var ua = navigator.userAgent;
+  var isAndroid = /Android/i.test(ua);
+  var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var invite = 'c=' + encodeURIComponent(c) + '&t=' + encodeURIComponent(t);
+  if (isAndroid) {
+    var play = 'https://play.google.com/store/apps/details?id=com.yukitaka13.manekichi&referrer=' + encodeURIComponent(invite);
+    $('android').classList.remove('hidden');
+    $('play').textContent = T.play; $('play').href = play;
+    $('androidNote').textContent = T.androidNote;
+    setTimeout(function () { location.href = play; }, 400);
+  } else if (isIOS) {
+    var store = 'itms-apps://apps.apple.com/app/id6833019882';
+    $('ios').classList.remove('hidden');
+    $('iosStep1').textContent = T.iosStep1;
+    $('appStore').textContent = T.appStore; $('appStore').href = store;
+    $('iosStep2').textContent = T.iosStep2;
+    $('openApp').textContent = T.openApp; $('openApp').href = 'pochi://join?' + invite;
+    // 最初の 1 回だけ自動で App Store を開く (= 戻ってきた時に何度も開かない)
+    try {
+      if (!sessionStorage.getItem('manekichiStore')) {
+        sessionStorage.setItem('manekichiStore', '1');
+        setTimeout(function () { location.href = store; }, 400);
+      }
+    } catch (e) {}
+  } else {
+    $('other').classList.remove('hidden');
+    $('otherNote').textContent = T.other;
+  }
+})();
+</script>
+</body>
+</html>
