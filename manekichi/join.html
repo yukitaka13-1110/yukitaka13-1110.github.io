@@ -11,6 +11,8 @@
   /.well-known/ の 2 つのファイル)。 入っていない時だけ、 このページからストアへ送る:
   - Android: Google Play へ。 招待 (c, t) は Play の install referrer でアプリに渡る (= 入れた後そのまま家族に入る)
   - iPhone: App Store へ。 戻ってきたら 「家族に入る」 を押す (= pochi://join でアプリを開く)
+  b=test (= テスト版のアプリが出した招待) の時: iPhone は TestFlight の公開リンク、 Android は内部テストへの参加
+  (= 招いた人にテスターのリストへ入れてもらう必要がある) へ送る。 ユーザー決定 2026-11-13 「TestFlight の公開リンクへ」
 -->
 <style>
   :root { --bg1:#FFD25A; --bg2:#FFE2B5; --ink:#3B2416; --sub:#7A5A45; --red:#C8432B; --card:#FFFDF7; }
@@ -65,7 +67,11 @@
     iosStep1: '1. アプリを入れる', appStore: 'App Store で入れる',
     iosStep2: '2. 入れたら、 ここに戻って押す', openApp: '家族に入る',
     play: 'Google Play で入れる', androidNote: '入れたらアプリを開き、 おうちの人として登録すると、 そのまま家族に入ります。',
-    other: 'スマホのカメラで QR を読んでください。', code: 'アプリで番号を入れる時はこちら'
+    other: 'スマホのカメラで QR を読んでください。', code: 'アプリで番号を入れる時はこちら',
+    tfStep1: '1. TestFlight でテスト版を入れる', tfLink: 'TestFlight で入れる',
+    tfNote: 'TestFlight のアプリが無い時は、 先に App Store から TestFlight を入れてください。',
+    gpTest: 'テスト版です。 招いた人に、 あなたの Google アカウントをテスターのリストに入れてもらってから、 次の順に進んでください。',
+    gpOptIn: '1. テストに参加する', gpInstall: '2. Google Play で入れる'
   } : {
     title: 'You’re invited to a Penny Pup family',
     lead: 'Get the app and sign up as a grown-up to join the family.',
@@ -73,7 +79,11 @@
     iosStep1: '1. Get the app', appStore: 'Get it on the App Store',
     iosStep2: '2. Then come back here and tap', openApp: 'Join the family',
     play: 'Get it on Google Play', androidNote: 'Open the app and sign up as a grown-up. You’ll join the family right away.',
-    other: 'Scan the QR code with your phone’s camera.', code: 'Code to type in the app'
+    other: 'Scan the QR code with your phone’s camera.', code: 'Code to type in the app',
+    tfStep1: '1. Get the test version on TestFlight', tfLink: 'Get it on TestFlight',
+    tfNote: 'If you don’t have TestFlight, get it from the App Store first.',
+    gpTest: 'This is a test version. Ask the person who invited you to add your Google account to the tester list, then:',
+    gpOptIn: '1. Join the test', gpInstall: '2. Get it on Google Play'
   };
   var $ = function (id) { return document.getElementById(id); };
   $('title').textContent = T.title;
@@ -85,17 +95,37 @@
   var isAndroid = /Android/i.test(ua);
   var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var invite = 'c=' + encodeURIComponent(c) + '&t=' + encodeURIComponent(t);
+  var test = q.get('b') === 'test';
   if (isAndroid) {
     var play = 'https://play.google.com/store/apps/details?id=com.yukitaka13.manekichi&referrer=' + encodeURIComponent(invite);
     $('android').classList.remove('hidden');
-    $('play').textContent = T.play; $('play').href = play;
-    $('androidNote').textContent = T.androidNote;
-    setTimeout(function () { location.href = play; }, 400);
+    $('play').href = play;
+    if (test) {
+      // 内部テストはリストに入った人だけ (= 勝手に Play へ飛ばすと 「入手できません」 になる)
+      $('androidNote').textContent = T.gpTest;
+      var optIn = document.createElement('a');
+      optIn.className = 'btn secondary'; optIn.textContent = T.gpOptIn;
+      optIn.href = 'https://play.google.com/apps/internaltest/4701439531513274777';
+      $('play').parentNode.insertBefore(optIn, $('play'));
+      $('play').parentNode.insertBefore($('androidNote'), optIn);
+      $('play').textContent = T.gpInstall;
+    } else {
+      $('play').textContent = T.play;
+      $('androidNote').textContent = T.androidNote;
+      setTimeout(function () { location.href = play; }, 400);
+    }
   } else if (isIOS) {
-    var store = 'itms-apps://apps.apple.com/app/id6833019882';
+    var store = test ? 'itms-beta://testflight.apple.com/join/b6B6U2Fw' : 'itms-apps://apps.apple.com/app/id6833019882';
     $('ios').classList.remove('hidden');
-    $('iosStep1').textContent = T.iosStep1;
-    $('appStore').textContent = T.appStore; $('appStore').href = store;
+    $('iosStep1').textContent = test ? T.tfStep1 : T.iosStep1;
+    $('appStore').textContent = test ? T.tfLink : T.appStore;
+    // TestFlight はアプリが無いと itms-beta が開かないので、 ボタンは https の公開リンク (= Apple のページが案内する)
+    $('appStore').href = test ? 'https://testflight.apple.com/join/b6B6U2Fw' : store;
+    if (test) {
+      var note = document.createElement('p');
+      note.className = 'step'; note.textContent = T.tfNote;
+      $('appStore').parentNode.insertBefore(note, $('iosStep2'));
+    }
     $('iosStep2').textContent = T.iosStep2;
     $('openApp').textContent = T.openApp; $('openApp').href = 'pochi://join?' + invite;
     // 最初の 1 回だけ自動で App Store を開く (= 戻ってきた時に何度も開かない)
